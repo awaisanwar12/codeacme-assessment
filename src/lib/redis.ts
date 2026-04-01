@@ -83,14 +83,18 @@ export async function cacheInvalidate(pattern: string): Promise<boolean> {
 // Rate limiting
 export async function checkRateLimit(
   identifier: string,
-  maxRequests: number = 10,
-  windowSeconds: number = 60
+  maxRequests: number = 5,
+  windowSeconds: number = 3600
 ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
   const redis = getRedisClient();
   
-  // If Redis is unavailable, allow the request
+  // If Redis is unavailable, always allow the request
   if (!redis) {
-    return { allowed: true, remaining: maxRequests - 1, resetAt: Date.now() + windowSeconds * 1000 };
+    return { 
+      allowed: true, 
+      remaining: maxRequests - 1, 
+      resetAt: Date.now() + windowSeconds * 1000 
+    };
   }
   
   const key = `rate-limit:${identifier}`;
@@ -113,7 +117,11 @@ export async function checkRateLimit(
     };
   } catch (error) {
     console.error('Rate limit check error:', error);
-    // Fail open - allow request if rate limiting fails
-    return { allowed: true, remaining: maxRequests - 1, resetAt: Date.now() + windowSeconds * 1000 };
+    // Fail open - always allow request if rate limiting fails
+    return { 
+      allowed: true, 
+      remaining: maxRequests - 1, 
+      resetAt: Date.now() + windowSeconds * 1000 
+    };
   }
 }
