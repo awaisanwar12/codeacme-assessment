@@ -15,7 +15,7 @@
   "dependencies": {
     "@prisma/client": "^6.2.0",
     "@tanstack/react-query": "^5.62.0",
-    "@upstash/redis": "^1.34.3",
+    "@upstash/redis": "^1.37.0",
     "bcryptjs": "^3.0.1",
     "crypto-js": "^4.2.0",
     "jose": "^5.9.6",
