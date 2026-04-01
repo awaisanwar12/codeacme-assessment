@@ -1,13 +1,13 @@
 // src/services/ai-analysis.ts
 // AI Brief Analyzer - Processes project briefs using LLM (OpenAI-compatible or Google Gemini)
 import { prisma } from '@/lib/prisma';
-import type { Brief, AIAnalysis, ProjectCategory } from '@prisma/client';
+import type { Brief, AIAnalysis } from '@prisma/client';
 
 // LLM Provider configuration (supports multiple providers)
 interface LLMResponse {
   features: string[];
   requirements: string[];
-  category: ProjectCategory;
+  category: 'WEB_APP' | 'MOBILE' | 'AI_ML' | 'AUTOMATION' | 'INTEGRATION' | 'ECOMMERCE' | 'CMS' | 'OTHER';
   techStack: string[];
   effortMinHours: number;
   effortMaxHours: number;
@@ -15,10 +15,10 @@ interface LLMResponse {
   confidenceScore: number; // 0-1
 }
 
-const VALID_CATEGORIES: ProjectCategory[] = [
+const VALID_CATEGORIES = [
   'WEB_APP', 'MOBILE', 'AI_ML', 'AUTOMATION', 
   'INTEGRATION', 'ECOMMERCE', 'CMS', 'OTHER'
-];
+] as const;
 
 // Build the system prompt for the AI
 function buildAnalysisPrompt(brief: Brief): string {
