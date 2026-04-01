@@ -30,12 +30,12 @@ async function handleGetBriefs(request: NextRequest) {
       limit: searchParams.get('limit') || '20',
     };
 
-    const limit = Math.min(100, Math.max(1, parseInt(params.limit, 10) || 20));
+    const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? '20', 10)));
 
     // Build query filters
-    const where: { stage?: string } = {};
+    const where: { stage?: "NEW" | "UNDER_REVIEW" | "PROPOSAL_SENT" | "WON" | "ARCHIVED" } = {};
     if (params.stage) {
-      where.stage = params.stage;
+      where.stage = params.stage as typeof where.stage;
     }
 
     // Fetch briefs with cursor-based pagination
@@ -84,7 +84,7 @@ async function handleGetBriefs(request: NextRequest) {
     });
 
     const result = {
-      briefs: items.map(b => ({
+      briefs: items.map((b: any) => ({
         id: b.id,
         title: b.title,
         contactName: b.contactName,
@@ -106,7 +106,7 @@ async function handleGetBriefs(request: NextRequest) {
         hasNext,
         count: items.length,
       },
-      stageCounts: stageCounts.reduce((acc, s) => {
+      stageCounts: stageCounts.reduce((acc: Record<string, number>, s: any) => {
         acc[s.stage] = s._count.id;
         return acc;
       }, {} as Record<string, number>),
