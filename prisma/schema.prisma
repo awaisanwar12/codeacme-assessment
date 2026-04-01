@@ -1,0 +1,244 @@
+// prisma/schema.prisma
+// Agency Brief Pipeline - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// USER MODEL (Auth & Roles)
+// ============================================
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  name          String?
+  role          UserRole  @default(REVIEWER)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  notes         Note[]
+  assignedBriefs Brief[] @relation("AssignedBriefs")
+  stageEvents   StageEvent[]
+
+  @@map("users")
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  ADMIN
+  REVIEWER
+  
+  @@map("user_role")
+}
+
+// ============================================
+// BRIEF MODEL (Project Submission)
+// ============================================
+model Brief {
+  id            String        @id @default(cuid())
+  title         String
+  description   String        @db.Text
+  budgetRange   BudgetRange   @map("budget_range")
+  urgency       UrgencyLevel  @default(MEDIUM)
+  
+  // Contact Info
+  contactName   String        @map("contact_name")
+  contactEmail  String        @map("contact_email")
+  contactPhone  String?       @map("contact_phone")
+  companyName   String?       @map("company_name")
+  
+  // Pipeline State
+  stage         BriefStage    @default(NEW)
+  assignedToId  String?       @map("assigned_to_id")
+  
+  // Source tracking
+  source        BriefSource   @default(FORM)
+  sourceRef     String?       @map("source_ref") // External ID from webhook/source
+  
+  // Timestamps
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  
+  // Relations
+  aiAnalysis    AIAnalysis?
+  notes         Note[]
+  stageEvents   StageEvent[]
+  assignedTo    User?         @relation("AssignedBriefs", fields: [assignedToId], references: [id])
+  
+  // Composite index for common queries
+  @@map("briefs")
+  @@index([stage])
+  @@index([stage, createdAt(sort: Desc)])
+  @@index([assignedToId])
+  @@index([source])
+  @@index([contactEmail])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum BriefStage {
+  NEW
+  UNDER_REVIEW
+  PROPOSAL_SENT
+  WON
+  ARCHIVED
+  
+  @@map("brief_stage")
+}
+
+enum BudgetRange {
+  UNDER_5K
+  FIVE_TO_10K
+  TEN_TO_25K
+  TWENTY_FIVE_TO_50K
+  FIFTY_TO_100K
+  OVER_100K
+  
+  @@map("budget_range")
+}
+
+enum UrgencyLevel {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  
+  @@map("urgency_level")
+}
+
+enum BriefSource {
+  FORM
+  WEBHOOK
+  MANUAL
+  
+  @@map("brief_source")
+}
+
+// ============================================
+// AI ANALYSIS MODEL (LLM Results)
+// ============================================
+model AIAnalysis {
+  id                String    @id @default(cuid())
+  briefId           String    @unique @map("brief_id")
+  
+  // AI-generated content
+  features          String[]  // Extracted feature list
+  requirements      String[]  // Structured requirements
+  category          ProjectCategory
+  techStack         String[]  @map("tech_stack")
+  
+  // Estimations
+  effortMinHours    Int       @map("effort_min_hours")
+  effortMaxHours    Int       @map("effort_max_hours")
+  complexityScore   Int       @map("complexity_score") // 1-5
+  confidenceScore   Float     @map("confidence_score") // 0-1, AI's confidence
+  
+  // Raw data for audit/debugging
+  rawPrompt         String?   @db.Text @map("raw_prompt")
+  rawResponse       String?   @db.Text @map("raw_response")
+  
+  // Human overrides
+  overriddenHours   Int?      @map("overridden_hours")
+  overrideReason    String?   @map("override_reason")
+  
+  // Status
+  status            AnalysisStatus @default(PENDING)
+  errorMessage      String?   @map("error_message")
+  retries           Int       @default(0)
+  
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at")
+  completedAt       DateTime? @map("completed_at")
+  
+  // Relations
+  brief             Brief     @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  
+  @@map("ai_analyses")
+  @@index([briefId])
+  @@index([category])
+  @@index([complexityScore])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum ProjectCategory {
+  WEB_APP
+  MOBILE
+  AI_ML
+  AUTOMATION
+  INTEGRATION
+  ECOMMERCE
+  CMS
+  OTHER
+  
+  @@map("project_category")
+}
+
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  
+  @@map("analysis_status")
+}
+
+// ============================================
+// NOTE MODEL (Internal Threaded Comments)
+// ============================================
+model Note {
+  id            String    @id @default(cuid())
+  briefId       String    @map("brief_id")
+  userId        String    @map("user_id")
+  content       String    @db.Text
+  parentId      String?   @map("parent_id") // For threaded replies
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  brief         Brief     @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id])
+  parent        Note?     @relation("NoteReplies", fields: [parentId], references: [id])
+  replies       Note[]    @relation("NoteReplies")
+  
+  @@map("notes")
+  @@index([briefId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@index([parentId])
+}
+
+// ============================================
+// STAGE EVENT MODEL (Audit Trail)
+// ============================================
+model StageEvent {
+  id            String    @id @default(cuid())
+  briefId       String    @map("brief_id")
+  userId        String    @map("user_id")
+  
+  fromStage     BriefStage @map("from_stage")
+  toStage       BriefStage @map("to_stage")
+  
+  reason        String?   @db.Text
+  metadata      Json?     // Additional context
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  // Relations
+  brief         Brief     @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id])
+  
+  @@map("stage_events")
+  @@index([briefId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+}
