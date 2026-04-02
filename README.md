@@ -25,7 +25,7 @@ Automates the intake and analysis of project briefs for agencies. Clients submit
 |-------|-----------|
 | Framework | Next.js 14 (App Router) |
 | Language | TypeScript |
-| Database | PostgreSQL (Supabase) |
+| Database | PostgreSQL (Neon) |
 | ORM | Prisma |
 | Cache | Redis (Upstash) |
 | Auth | Custom JWT (jose) |
