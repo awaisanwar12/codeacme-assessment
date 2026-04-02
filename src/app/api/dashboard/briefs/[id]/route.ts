@@ -22,10 +22,8 @@ export async function GET(
 
     const briefId = params.id;
 
-    // Reviewers can only view assigned briefs
-    const whereClause = user.role === 'ADMIN'
-      ? { id: briefId }
-      : { id: briefId, assignedToId: user.userId };
+    // Reviewers can view all briefs (read-only), admins have full access
+    const whereClause = { id: briefId };
 
     const brief = await prisma.brief.findUnique({
       where: whereClause,
