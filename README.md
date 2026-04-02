@@ -39,7 +39,7 @@ Automates the intake and analysis of project briefs for agencies. Clients submit
 ### Prerequisites
 - Node.js 18+
 - npm
-- A PostgreSQL database (Supabase free tier recommended)
+- A PostgreSQL database (Neon free tier recommended)
 - A Google Gemini API key (free)
 - Upstash Redis (optional, free tier)
 
@@ -55,13 +55,13 @@ Create a `.env.local` file in the project root:
 
 ```bash
 # ============================================
-# DATABASE (Supabase - Free)
+# DATABASE (Neon - Free)
 # ============================================
-# Settings → Database → Connection string → URI
-# DATABASE_URL uses port 6543 (pooler, Transaction mode)
-# DIRECT_URL uses port 5432 (direct connection)
-DATABASE_URL="postgresql://postgres.[PROJECT-REF]:YOUR-PASSWORD@db.[PROJECT-REF].supabase.co:6543/postgres"
-DIRECT_URL="postgresql://postgres.[PROJECT-REF]:YOUR-PASSWORD@db.[PROJECT-REF].supabase.co:5432/postgres"
+# Get connection string from Neon Console → Project → Connection Details
+# Use the pooled connection for DATABASE_URL (recommended for serverless)
+# Use the direct connection for DIRECT_URL (for migrations)
+DATABASE_URL="postgresql://user:password@ep-xxx.region.aws.neon.tech/dbname?sslmode=require"
+DIRECT_URL="postgresql://user:password@ep-xxx.region.aws.neon.tech/dbname?sslmode=require"
 
 # AUTHENTICATION - Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
 JWT_SECRET="your-super-secret-jwt-key-min-32-chars"
@@ -70,29 +70,28 @@ JWT_SECRET="your-super-secret-jwt-key-min-32-chars"
 # AI/LLM PROVIDER
 # ============================================
 # Google Gemini (FREE - recommended): https://aistudio.google.com/apikey
-GOOGLE_API_KEY="AIzaSy..."
+GOOGLE_API_KEY="your-api-key"
 LLM_MODEL="gemini-2.0-flash"
 
 # REDIS - Get from https://upstash.com (free, optional)
 UPSTASH_REDIS_REST_URL="https://your-db.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="your-token-here"
+UPSTASH_REDIS_REST_TOKEN="your-token"
 
 # WEBHOOK SECURITY - Generate with: openssl rand -base64 32
 WEBHOOK_SECRET="your-webhook-signature-secret"
 
 # INITIAL ADMIN USER
 ADMIN_EMAIL="admin@example.com"
-ADMIN_PASSWORD="ChangeThisPassword123!"
+ADMIN_PASSWORD="your-secure-password"
 ```
 
 #### Getting Each Service
 
-**Database (Supabase - Free):**
-1. Sign up at https://supabase.com
-2. Create a project → Settings → Database → Connection string
-3. Use **URI** format
-4. **DATABASE_URL** = port 6543 (pooler, Transaction mode)
-5. **DIRECT_URL** = port 5432 (direct connection)
+**Database (Neon - Free):**
+1. Sign up at https://neon.tech
+2. Create a project → Connection Details → Copy connection string
+3. Use the **pooled** connection for `DATABASE_URL` (serverless-friendly)
+4. Use the **direct** connection for `DIRECT_URL` (migrations, Prisma Studio)
 
 **LLM API Key (Choose one):**
 - **OpenAI**: https://platform.openai.com → API Keys → Create (new accounts get $5 free)
